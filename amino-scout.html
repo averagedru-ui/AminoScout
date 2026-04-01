@@ -37,13 +37,14 @@
       --shadow-md:  0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.05);
     }
 
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; overflow-x: hidden; }
     body {
       font-family: var(--font-body);
       background: var(--bg);
       color: var(--ink);
       min-height: 100vh;
       -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
 
     /* ── NAV ─────────────────────────────────────────── */
@@ -593,6 +594,8 @@
       .stats-bar { grid-template-columns: repeat(2,1fr); }
       .nav-spacer { display: none; }
       .data-badge { display: none; }
+      .btn-ghost.nav-request { display: none; }
+      .btn-accent.nav-add { font-size: .75rem; padding: 6px 10px; }
       .vendor-table th, .vendor-table td { padding: 8px 10px; }
     }
     @media (max-width: 480px) {
@@ -621,8 +624,8 @@
     <span class="dot"></span>
     <span id="freshness-text">Estimated data</span>
   </div>
-  <button class="btn btn-ghost" onclick="openModal('modal-request-vendor')">+ Request Vendor</button>
-  <button class="btn btn-accent" onclick="openAddPrice()">+ Add Price</button>
+  <button class="btn btn-ghost nav-request" onclick="openModal('modal-request-vendor')">+ Request Vendor</button>
+  <button class="btn btn-accent nav-add" onclick="openAddPrice()">+ Add Price</button>
   <div class="nav-profile" id="profile-btn" onclick="openProfile()" title="Profile">&#128100;</div>
 </nav>
 
