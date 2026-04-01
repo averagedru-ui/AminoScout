@@ -459,9 +459,7 @@
       padding: 3px 8px; border-radius: 5px; text-transform: uppercase;
     }
     .stock-in  { background: rgba(68,255,170,.12); color: var(--green); }
-    .stock-low { background: rgba(255,187,68,.12); color: var(--amber); }
-    .stock-out { background: rgba(255,85,85,.12); color: var(--red); }
-    .stock-unknown { background: rgba(136,136,170,.1); color: var(--text2); }
+    .stock-out { background: rgba(255,85,85,.12);  color: var(--red);   }
 
     .coa-badge {
       font-size: .68rem; font-weight: 700;
@@ -1298,7 +1296,7 @@ function buildListings(csvRows) {
       price,
       maxPrice:    parseFloat(row.max_price) || price,
       purity:      null,
-      stock:       row.stock_status || 'unknown',
+      stock:       (row.stock_status || '').toLowerCase() === 'out' ? 'out' : 'in',
       hasCoa,
       discount:    vendor.discount || null,
       rating:      vendor.rating,
@@ -1420,7 +1418,7 @@ function renderGrid() {
 function renderCard({ peptide, rows, best, worst, spread }) {
   const catInfo  = CATEGORIES[peptide.cat];
   const expanded = state.expanded.has(peptide.id);
-  const inStockCount = rows.filter(r => r.stock === 'in' || r.stock === 'low').length;
+  const inStockCount = rows.filter(r => r.stock === 'in').length;
 
   return `
   <div class="peptide-card${expanded ? ' expanded' : ''}" id="card-${peptide.id}">
@@ -1479,7 +1477,7 @@ function renderVendorTable(rows, peptide) {
       ? `<span class="price-from">from</span><span class="price-cell${isBest ? ' best' : ''}">$${r.price.toFixed(2)}</span>${hasRange ? `<span class="price-to">– $${r.maxPrice.toFixed(2)}</span>` : ''}`
       : `<span class="price-cell${isBest ? ' best' : ''}">$${r.price.toFixed(2)}</span>`;
 
-    const stockLabel = r.stock === 'in' ? 'In Stock' : r.stock === 'low' ? 'Low Stock' : r.stock === 'out' ? 'Out of Stock' : '—';
+    const stockLabel = r.stock === 'out' ? 'Out of Stock' : 'In Stock';
 
     return `<tr class="${isBest ? 'best-row' : ''}">
       <td>
@@ -1526,7 +1524,7 @@ function updateStats(groups) {
     g.rows.forEach(r => {
       allPrices.push(r.price);
       vendorIds.add(r.vendorId);
-      if (r.stock === 'in') inStockCount++;
+      if (r.stock !== 'out') inStockCount++;
     });
   });
   document.getElementById('stat-vendors').textContent  = vendorIds.size || '—';
