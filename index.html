@@ -392,6 +392,10 @@
       background: var(--surface2); border: 1px solid var(--border2);
       color: var(--ink2); padding: 2px 7px; border-radius: 4px; white-space: nowrap;
     }
+    .size-tag-btn { cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+    .size-tag-btn:hover { border-color: var(--ink2); color: var(--ink); }
+    .size-tag-btn.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+    .vendor-table tr.best-row .size-tag-btn.active { background: #fff; border-color: #fff; color: var(--ink); }
     .price-from { font-size: .63rem; color: var(--ink3); font-weight: 400; margin-right: 2px; }
     .price-to   { font-size: .7rem;  color: var(--ink3); margin-left: 3px; }
 
@@ -1157,6 +1161,20 @@ function buildListings(csvRows) {
     const coaRaw = (row.coa_available || '').toLowerCase();
     const hasCoa = coaRaw === 'true' || coaRaw === 'yes' || vendor.coa;
 
+    // Parse size_prices: "10mg:27.00,40mg:55.00" → {10mg: 27.00, 40mg: 55.00}
+    const sizePricesRaw = row.size_prices || '';
+    const sizePrices = {};
+    if (sizePricesRaw.trim()) {
+      sizePricesRaw.split(',').forEach(part => {
+        const colonIdx = part.indexOf(':');
+        if (colonIdx > 0) {
+          const sz = part.slice(0, colonIdx).trim();
+          const pr = parseFloat(part.slice(colonIdx + 1).trim());
+          if (sz && !isNaN(pr)) sizePrices[sz] = pr;
+        }
+      });
+    }
+
     map[key] = {
       key,
       vendorId:    vendor.id,
@@ -1169,6 +1187,7 @@ function buildListings(csvRows) {
       size:        row.sizes_available || peptide.size,
       price,
       maxPrice:    parseFloat(row.max_price) || price,
+      sizePrices,
       purity:      null,
       stock:       (row.stock_status || '').toLowerCase() === 'out' ? 'out' : 'in',
       hasCoa,
@@ -1341,14 +1360,24 @@ function renderVendorTable(rows, peptide) {
     const rawSize    = (r.size || '').trim();
     const sizes      = rawSize ? rawSize.split(/,\s*/).map(s => s.trim()).filter(Boolean) : [];
     const multiSize  = sizes.length > 1;
+    const hasSizePrices = r.sizePrices && Object.keys(r.sizePrices).length > 0;
     const hasRange   = r.maxPrice && r.maxPrice > r.price;
 
+    const rowKey = r.key.replace(/[^a-z0-9_-]/gi, '_');
+
     const sizeTags = sizes.length
-      ? sizes.map(s => `<span class="size-tag">${s}</span>`).join('')
+      ? sizes.map((s, si) => {
+          const sp = hasSizePrices ? r.sizePrices[s] : null;
+          const priceAttr = sp != null ? ` data-price="${sp.toFixed(2)}"` : '';
+          const clickable = (multiSize && sp != null) ? ` size-tag-btn` : '';
+          const firstActive = (multiSize && si === 0 && hasSizePrices) ? ' active' : '';
+          return `<span class="size-tag${clickable}${firstActive}"${priceAttr} onclick="selectSizePill(this,'${rowKey}')">${s}</span>`;
+        }).join('')
       : '<span class="size-tag">—</span>';
 
+    const priceId = `price-${rowKey}`;
     const priceHtml = multiSize
-      ? `<span class="price-from">from</span><span class="price-cell${isBest ? ' best' : ''}">$${r.price.toFixed(2)}</span>${hasRange ? `<span class="price-to">– $${r.maxPrice.toFixed(2)}</span>` : ''}`
+      ? `<span class="price-from">from</span><span id="${priceId}" class="price-cell${isBest ? ' best' : ''}">$${r.price.toFixed(2)}</span>${hasRange && !hasSizePrices ? `<span class="price-to">– $${r.maxPrice.toFixed(2)}</span>` : ''}`
       : `<span class="price-cell${isBest ? ' best' : ''}">$${r.price.toFixed(2)}</span>`;
 
     const stockLabel = r.stock === 'out' ? 'Out of Stock' : 'In Stock';
@@ -1665,6 +1694,28 @@ function dismissVendorRequest(idx) {
 // ══════════════════════════════════════════════════
 //  UTILITIES
 // ══════════════════════════════════════════════════
+function selectSizePill(el, rowKey) {
+  // Deactivate siblings in same size-cell
+  const cell = el.closest('.size-cell');
+  if (!cell) return;
+  cell.querySelectorAll('.size-tag-btn').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+
+  // Update price display if this pill has a data-price
+  const price = el.dataset.price;
+  if (price) {
+    const priceEl = document.getElementById('price-' + rowKey);
+    if (priceEl) {
+      priceEl.textContent = '$' + parseFloat(price).toFixed(2);
+      // Remove "from" label since we now know the exact price
+      const fromEl = priceEl.previousElementSibling;
+      if (fromEl && fromEl.classList.contains('price-from')) {
+        fromEl.style.display = 'none';
+      }
+    }
+  }
+}
+
 function copyCode(code) {
   navigator.clipboard.writeText(code).then(() => showToast(`Copied: ${code}`, 'success'));
 }
