@@ -1,0 +1,10 @@
+# Python scripts (internal tooling, not needed on site)
+update_wf.py
+wf_orig.json
+
+# n8n / local config
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
